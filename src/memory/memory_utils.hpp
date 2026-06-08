@@ -17,4 +17,16 @@ namespace tessera {
         // adding `alignment - 1` makes sure that any remainder when dividing by `alignment` is pushed up
         return (value + alignment - 1) & ~(alignment - 1); // ~(alignment - 1) inverts the bits, creating a mask
     }
+
+    // adds an offset to a void pointer
+    inline void* ptr_add(void* base, usize offset) {
+        return static_cast<u8*>(base) + offset;
+    }
+    
+    // aligns the pointer up to the nearest multiple of `alignment`
+    inline void* align_ptr(void* ptr, usize alignment) {
+        usize addr = reinterpret_cast<usize>(ptr);
+        usize aligned_addr = align_up(addr, alignment);
+        return reinterpret_cast<void*>(aligned_addr);
+    }
 }

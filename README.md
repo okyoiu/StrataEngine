@@ -258,9 +258,3 @@ tessera/
 ├── tests/             # Unit tests per subsystem
 └── docs/              # Architecture notes, memory model diagram
 ```
-
----
-
-## License
-
-MIT — see `LICENSE`.
