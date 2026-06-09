@@ -1,0 +1,53 @@
+# ========================================
+# Tessera Engine .gitignore
+# ========================================
+
+# --- CMake & Build Artifacts ---
+build/
+out/
+bin/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+compile_commands.json
+install_manifest.txt
+*.cmake
+
+# --- Compiled Binaries & Objects ---
+*.o
+*.obj
+*.out
+*.app
+*.dylib
+*.so
+*.a
+*.exe
+
+# --- Executable Targets ---
+# (From our CMakeLists.txt)
+tessera_engine
+benchmarks
+
+# --- macOS Specific ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# --- IDEs & Editors ---
+# VS Code
+.vscode/
+*.code-workspace
+# CLion / JetBrains
+.idea/
+cmake-build-*/
+# Vim
+*.swp
+*.swo
+
+# --- Crash Logs ---
+*.crash
