@@ -197,3 +197,4 @@ template <typename T>
 {
     return std::make_unique<ComponentPool<T>>(type_id, initial_capacity);
 }
+}
