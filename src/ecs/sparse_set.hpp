@@ -14,9 +14,9 @@ namespace tessera::ecs {
     requires std::is_move_constructible_v<T>
     class SparseSet {
         private: 
-            EntityID* dense_entities_;
-            T* dense_components_;
-            u32** sparse_pages_;
+            EntityID* dense_entities_; // tells what entity ID is sitting here
+            T* dense_components_; // the actual data 
+            u32** sparse_pages_; // big array holding dense index of where data lives
             usize size_;
             usize capacity_;
             usize page_count_;
@@ -208,13 +208,17 @@ namespace tessera::ecs {
                 if (size_ >= capacity_) {
                     reserve(capacity_ == 0 ? 64 : capacity_ * 2);
                 }
+    
+                /*
+                    Ensures that there are no holes within the arrays so that CPU doesn't 
+                    waste more power for computing this
+                */
+                const u32 dense_idx = static_cast<u32>(size_); // figuring out where the end if the packed array is (size_)
+                dense_entities_[dense_idx] = entity; // putting the entity ID at the end of the packed entity array
+                std::construct_at(&dense_components_[dense_idx], std::forward<Args>(args)...); // putting the component data at the end of the packed data array
 
-                const u32 dense_idx = static_cast<u32>(size_);
-                dense_entities_[dense_idx] = entity;
-                std::construct_at(&dense_components_[dense_idx], std::forward<Args>(args)...);
-
-                *sparse_ptr(index) = dense_idx;
-                ++size_;
+                *sparse_ptr(index) = dense_idx; // updating the directory to point to new packed index
+                ++size_; // increase counter
 
                 return dense_components_[dense_idx];
             }
@@ -222,22 +226,26 @@ namespace tessera::ecs {
             void remove(EntityID entity) {
                 TESSERA_ASSERT(has(entity), "Entity does not exist in sparse set");
 
-                const u32 index = entity_index(entity);
-                const u32 dense_idx = *sparse_ptr(index);
-                const u32 last_idx = static_cast<u32>(size_ - 1);
+                const u32 index = entity_index(entity); 
+                const u32 dense_idx = *sparse_ptr(index); // looks up where entity we want to delete is current at
+                const u32 last_idx = static_cast<u32>(size_ - 1); // find the index of the very last item in our packed array
 
                 if (dense_idx != last_idx) {
-                    // Swap-and-pop
+                    // grab  the entity ID of the very last item
                     EntityID last_entity = dense_entities_[last_idx];
                     
+                    // overwrite the deleted entity's slow with the last entity's ID
                     dense_entities_[dense_idx] = last_entity;
+                    // more overwriting entity's COMPONENT data with last entity's data
                     std::destroy_at(&dense_components_[dense_idx]);
                     std::construct_at(&dense_components_[dense_idx], 
                                     std::move(dense_components_[last_idx]));
 
+                    // update directory so last entity knows new address
                     *sparse_ptr(entity_index(last_entity)) = dense_idx;
                 }
 
+                // destroy the data at the end of the array and shrink the size
                 std::destroy_at(&dense_components_[last_idx]);
                 --size_;
             }
