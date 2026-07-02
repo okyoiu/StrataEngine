@@ -43,6 +43,24 @@ class Registry {
         // we can have exactly 1,048,576 entities alive at once
         // '1u' means unsigned integer 1. we bitshift it left by 20 positions
         static constexpr usize MAX_ENTITIES = 1u << 20u;
+
+        explicit Registry(usize expected_entities = 4096)
+            : m_next_index {0}{
+                // this prevents vectors from constantly resizing to save on speed
+                m_versions.reserve(expected_entities);
+                m_free_indices.reserve(256);
+                m_pools.reserve(32); // assuming we dont have more than 32 diff. component types
+            }
+
+            ~Registry() = default;
+
+            // non-copyable
+            Registry(const Registry&) = delete;
+            Registry& operator=(const Registry&) = delete;
+
+            // movable
+            Registry(Registry&&) noexcept = default;
+            Registry& operator=(Registry&&) noexcept = default;
     private:
         std::vector<u32> m_versions;
 
