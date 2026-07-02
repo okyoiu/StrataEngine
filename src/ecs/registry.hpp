@@ -61,6 +61,21 @@ class Registry {
             // movable
             Registry(Registry&&) noexcept = default;
             Registry& operator=(Registry&&) noexcept = default;
+
+            // creating a new entity. so we check an index and recycle from list.
+            // otherwise we increment
+            [[nodiscard]] EntityID create() {
+                u32 index;
+                if (!m_free_indices.empty()) {
+                    index = m_free_indices.back();
+                    m_free_indices.pop_back();
+                } else {
+                    TESSERA_ASSERT(m_next_index < MAX_ENTITIES, "Entity index overflow");
+                    index = m_next_index++;
+                    m_versions.push_back(0);
+                }
+                return make_entity_id(index, m_versions[index]);
+            }
     private:
         std::vector<u32> m_versions;
 
