@@ -76,6 +76,23 @@ class Registry {
                 }
                 return make_entity_id(index, m_versions[index]);
             }
+
+            // detroying an entity, so remove all components and recycle index
+            void destroy(EntityID entity) {
+                // if check condition for this
+                TESSERA_ASSERT(valid(entity), "Attempt to destroy an invalid entity");
+
+                // removing every pool that holds entity's component
+                for (auto& ptr : m_pools) {
+                    if (ptr && ptr->has(entity)) {
+                        ptr->erase(entity);
+                    }
+                }
+                        // Bump the version so any surviving handles become stale
+                const u32 index = entity_index(entity);
+                ++m_versions[index];
+                m_free_indices.push_back(index);
+            }
     private:
         std::vector<u32> m_versions;
 
