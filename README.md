@@ -6,7 +6,10 @@ A simple mock-up game that resembles Factorio in how its game mechanics work —
 _Note_: This should be noted that this build was made with the assistance of Artificial Intelligence during this project.
 
 ## Demo
-[tessera-use-demo.mov](../../../Downloads/tessera-use-demo.mov)
+
+
+https://github.com/user-attachments/assets/89a7c82d-1443-404c-9a9d-3152895d536f
+
 
 ## What this project demonstrates
 - A custom data-oriented ECS (sparse sets, dense arrays, cache-friendly iteration)
