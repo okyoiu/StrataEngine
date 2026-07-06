@@ -1,6 +1,7 @@
-#include <iostream>
+#include "src/app/app.hpp"
 
 int main() {
-    std::cout << "Tessera Engine initialized.\n";
+    tessera::app::App app;
+    app.run();
     return 0;
 }

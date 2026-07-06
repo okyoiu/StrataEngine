@@ -1,4 +1,5 @@
-/* 
+#pragma once
+/*
     CENTRAL HUB THAT MANAGES LIFECYCLES OF YOUR ENTITIES
 */
 
@@ -9,18 +10,14 @@
 
 #include <vector>
 #include <memory>
-#include <unordered_map>
-#include <typeindex>
-#include <typeinfo>
-#include <span>
+#include <utility>
 
-// for future ref.: do no touch the code inside namespace tessera
 namespace tessera::ecs {
 
 namespace detail {
     /**
-     * @brief generates a stricly increasing integer ID
-     * bc the counter is static, the memory is kept and is kept * throughout the function 
+     * @brief generates a strictly increasing integer ID
+     * bc the counter is static, the memory is kept throughout the program
      */
     inline u32 next_component_id() noexcept {
         static u32 counter = 0;
@@ -28,18 +25,18 @@ namespace detail {
     }
 
     /**
-     * @brief maps a c++ type to a unique integer ID
+     * @brief maps a c++ type to a unique integer ID, evaluated once per type
      */
     template <typename T>
     inline u32 component_id() noexcept {
-        // evaluate once per type, thread-safe
-        static const u32 id = next_component_id
+        static const u32 id = next_component_id();
+        return id;
     }
 }
 
 // REGISTRY
 class Registry {
-    public: 
+    public:
         // we can have exactly 1,048,576 entities alive at once
         // '1u' means unsigned integer 1. we bitshift it left by 20 positions
         static constexpr usize MAX_ENTITIES = 1u << 20u;
@@ -77,6 +74,13 @@ class Registry {
                 return make_entity_id(index, m_versions[index]);
             }
 
+            // checks whether a given handle still refers to a live entity
+            // (its version must match the current version stored for that index)
+            [[nodiscard]] auto valid(EntityID entity) const noexcept -> bool {
+                const u32 index = entity_index(entity);
+                return index < m_versions.size() && m_versions[index] == entity_version(entity);
+            }
+
             // detroying an entity, so remove all components and recycle index
             void destroy(EntityID entity) {
                 // if check condition for this
@@ -93,6 +97,55 @@ class Registry {
                 ++m_versions[index];
                 m_free_indices.push_back(index);
             }
+
+            // -------------------------------------------------------------------
+            // Generic component API
+            // -------------------------------------------------------------------
+
+            /// Fetches (creating on first use) the typed pool backing component T.
+            template <typename T>
+            [[nodiscard]] auto pool() -> ComponentPool<T>& {
+                const u32 id = detail::component_id<T>();
+                if (id >= m_pools.size()) {
+                    m_pools.resize(id + 1);
+                }
+                if (!m_pools[id]) {
+                    m_pools[id] = make_component_pool<T>(id);
+                }
+                return static_cast<ComponentPool<T>&>(*m_pools[id]);
+            }
+
+            template <typename T, typename... Args>
+                requires std::is_constructible_v<T, Args...>
+            auto add(EntityID entity, Args&&... args) -> T& {
+                return pool<T>().emplace(entity, std::forward<Args>(args)...);
+            }
+
+            template <typename T>
+            [[nodiscard]] auto get(EntityID entity) -> T& {
+                return pool<T>().get(entity);
+            }
+
+            template <typename T>
+            [[nodiscard]] auto get(EntityID entity) const -> const T& {
+                return const_cast<Registry*>(this)->pool<T>().get(entity);
+            }
+
+            template <typename T>
+            [[nodiscard]] auto try_get(EntityID entity) -> T* {
+                return pool<T>().try_get(entity);
+            }
+
+            template <typename T>
+            [[nodiscard]] auto has(EntityID entity) -> bool {
+                return pool<T>().has(entity);
+            }
+
+            template <typename T>
+            void remove(EntityID entity) {
+                pool<T>().erase(entity);
+            }
+
     private:
         std::vector<u32> m_versions;
 
@@ -102,7 +155,7 @@ class Registry {
         // A simple counter. If m_free_indices is empty, we grab the next fresh index from here.
         u32 m_next_index;
 
-        // This is the master list of all Component Pools. 
+        // This is the master list of all Component Pools.
         // We use unique_ptr so the Registry strictly owns the memory.
         // IComponentPoolBase allows us to store different types (Position, Velocity) in one array.
         std::vector<std::unique_ptr<IComponentPoolBase>> m_pools;
